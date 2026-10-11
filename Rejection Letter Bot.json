@@ -1,0 +1,277 @@
+{
+  "name": "PUTANG INANG REJECTION LETTER",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "simple": false,
+        "filters": {
+          "labelIds": [
+            "Label_2081121367891101871"
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        -208,
+        -112
+      ],
+      "id": "f8fa2143-4de0-4feb-8fe1-39e5c20f81bf",
+      "name": "Gmail Trigger",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "lyvdN3yOhACXWCr1",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-flash-lite-latest",
+          "mode": "list",
+          "cachedResultName": "models/gemini-flash-lite-latest"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=I am sick and tired of all these rejection letters so here's your goal. You are to serve as a corporate jargon bullshit reader and identify if this piece of shit letter is a rejection letter. \n\nOutput strictly valid JSON with no markdown formatting, no backticks, and no conversational text outside the JSON object.\n\nYour output must follow this exact schema:\n{\"reasoning\": \"Brief breakdown of the corporate jargon\",\n  \"is_rejection\": should be only true or false,\n  \"sarcastic_remark\": \"A witty/sarcastic retort for them alongside a roast of sending mail to the 'fuck you' label of my mails if applicable. Congratulate the mail content for being non rejection mail if it's otherwise\"}\n\nCRITICAL CLASSIFICATION RULE:\nSet `is_rejection` to TRUE ONLY if the email is explicitly declining to move forward with the candidate at any stage.\n\nSet `is_rejection` to FALSE if the email is:\n- An invitation to schedule an interview or phone screen\n- An offer letter or candidate assessment/take-home assignment\n- A general application receipt/confirmation (\"We received your application\")\n- An inquiry asking for more information or updated availability\n\nThis is what the smartass had to say:\n{{ $json.html }}"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.2,
+      "position": [
+        16,
+        -112
+      ],
+      "id": "79b0f6c3-ba70-47e1-84cb-67500abb741e",
+      "name": "Message a model",
+      "retryOnFail": true,
+      "credentials": {
+        "googlePalmApi": {
+          "id": "Pc4gmO7jpBat97Iv",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// 1. Target the exact n8n Gemini output structure ($json.content.parts[0].text)\nconst rawText = $json?.content?.parts?.[0]?.text \n             || $json?.parts?.[0]?.text \n             || $json?.candidates?.[0]?.content?.parts?.[0]?.text \n             || $json?.text \n             || \"\";\n\n// 2. Catch genuinely empty payloads\nif (!rawText.trim()) {\n  return {\n    error: \"No text found in incoming item.\",\n    raw_node_input: $json\n  };\n}\n\n// 3. Extract pure JSON between outer braces\nconst jsonMatch = rawText.match(/\\{[\\s\\S]*\\}/);\nconst sanitizedText = jsonMatch ? jsonMatch[0] : rawText.trim();\n\n// 4. Parse cleanly into n8n data fields\ntry {\n  return JSON.parse(sanitizedText);\n} catch (error) {\n  return {\n    parse_error: \"Found text, but JSON parsing failed.\",\n    raw_text: rawText\n  };\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        368,
+        -112
+      ],
+      "id": "d07240d7-247d-4cfb-9989-e23f22c70419",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "59a817d5-65f4-4e81-aef2-cc8760a97a2a",
+              "leftValue": "={{ $json.is_rejection }}",
+              "rightValue": false,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        592,
+        -112
+      ],
+      "id": "2b8d366d-9e5f-43bd-9756-6dc79399082b",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "operation": "addLabels",
+        "messageId": "={{ $('Gmail Trigger').item.json.id }}",
+        "labelIds": [
+          "Label_7514195937750770528"
+        ]
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1040,
+        -112
+      ],
+      "id": "c10116bb-ca58-4a81-b8d3-6286593e1096",
+      "name": "Add label to message1",
+      "webhookId": "8fed5d65-35c0-4003-bf8a-cedace8a48e8",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "lyvdN3yOhACXWCr1",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C0C7DLDJ0J0",
+          "mode": "id"
+        },
+        "text": "=Congratulations to the hall of shame, motherfucker! \nReasoning: {{ $('Code in JavaScript').item.json.reasoning }}\nRemark:{{ $('Code in JavaScript').item.json.sarcastic_remark }}",
+        "otherOptions": {}
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.6,
+      "position": [
+        1264,
+        -112
+      ],
+      "id": "33186193-afd1-4d94-9419-cf964e9e94d7",
+      "name": "Send a message",
+      "webhookId": "64385fa4-add1-4dd0-92c4-3adfe117f2d7",
+      "credentials": {
+        "slackApi": {
+          "id": "qnkIDpgtZnRfjHft",
+          "name": "Slack account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "removeLabels",
+        "messageId": "={{ $('Gmail Trigger').item.json.id }}",
+        "labelIds": [
+          "INBOX",
+          "Label_2081121367891101871"
+        ]
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        816,
+        -112
+      ],
+      "id": "e0c9d895-86bb-4e78-abf5-aa3f5885a08d",
+      "name": "Remove label from message",
+      "webhookId": "c8b6aff8-7727-410e-b502-90dccd41f24f",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "lyvdN3yOhACXWCr1",
+          "name": "Gmail account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Gmail Trigger": {
+      "main": [
+        [
+          {
+            "node": "Message a model",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Remove label from message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Add label to message1": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Remove label from message": {
+      "main": [
+        [
+          {
+            "node": "Add label to message1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "41fb0e42-8d25-4c25-a0cc-39a2f874fe7a",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "40947acabc2374345cd4ec7e9c93276c1b149fe5d42ab0a5c7e65f42243630df"
+  },
+  "nodeGroups": [],
+  "id": "AXHi2H4VJeeEakNf",
+  "tags": []
+}
